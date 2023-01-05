@@ -10,7 +10,7 @@ const sleep = (milliseconds) => {
   dotenv.config();
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
-  await page.goto("https://submit.shutterstock.com/login?language=en", {
+  await page.goto(process.env.CORNERSTONE_URL, {
     waitUntil: "networkidle2",
   });
 
