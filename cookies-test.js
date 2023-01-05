@@ -6,7 +6,7 @@ const fs = require("fs").promises;
 (async () => {
   dotenv.config();
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
   });
   const page = await browser.newPage();
 
@@ -15,6 +15,6 @@ const fs = require("fs").promises;
   const cookies = JSON.parse(cookiesString);
   await page.setCookie(...cookies);
   await page.goto(process.env.CORNERSTONE_URL);
-
-  //await browser.close();
+  await page.screenshot({ path: 'screenshot.png' });
+  await browser.close();
 })();
