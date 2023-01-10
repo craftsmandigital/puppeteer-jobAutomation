@@ -1,13 +1,17 @@
-const dotenv = require('dotenv');
 const puppeteer = require("puppeteer");
 const fs = require('fs').promises;
 const sleep = (milliseconds) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
 
+const dotenv = require('dotenv');
 // Load environment variables from the .env file
 dotenv.config();
 
+
+const url = new URL(process.env.CORNERSTONE_URL);
+const domainNamejson = "./.cookies/".concat(url.hostname.replace(/\./g, "_").concat(".json"));
+console.log(domainNamejson); // 'www.example.com'
 
 async function scrape(cookies) {
   // console.log(cookies);
@@ -29,21 +33,26 @@ async function scrape(cookies) {
 
   //load cookies
   await page.setCookie(...cookies);
-  await page.goto(process.env.CORNERSTONE_URL);
+  await page.goto(url.href);
   await page.screenshot({ path: 'screenshot.png' });
-  const url = await page.url();
+  const pageurl = await page.url();
   // // The test under is no ned for. the logic is taken care of in the login function page on load event
-  if (url !== process.env.CORNERSTONE_URL) {
+  if (pageurl !== url.href) {
 
-    console.log("url matsjer ikke med den vi vil inn på. prosessen stopper");
+    console.log("url matsjer ikke med den vi vil inn på. prosessen stopper\n%s  <>  %s", pageurl, url.href);
 
     await browser.close();
     // Fjern Cokies filen
-    await fs.rm("./cookies.json")
+    await fs.rm(domainNamejson);
     return;
   }
   await browser.close();
 }
+
+
+
+
+
 
 
 async function login() {
@@ -53,7 +62,7 @@ async function login() {
   // Read the cookies from the file, if they exist
   let cookies;
   try {
-    const cookiesString = await fs.readFile("./cookies.json");
+    const cookiesString = await fs.readFile(domainNamejson);
 
     cookies = JSON.parse(cookiesString);
     // await page.setCookie(...cookies);
@@ -70,7 +79,7 @@ async function login() {
   // console.log(cookies);
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
-  await page.goto(process.env.CORNERSTONE_URL, {
+  await page.goto(url.href, {
     waitUntil: "networkidle2",
   });
 
@@ -104,7 +113,7 @@ async function login() {
     //const cookies = await page.cookies();
     console.log('The browser window is closing');
     try {
-      await fs.writeFile('./cookies.json', JSON.stringify(cookies, null, 2));
+      await fs.writeFile(domainNamejson, JSON.stringify(cookies, null, 2));
       cookie = true;
     } catch (error) {
       cookie = false;
@@ -118,7 +127,7 @@ async function login() {
     // You can perform any cleanup tasks here, such as saving data or closing connections
     //save cookies
     // Only set cookies if we are redirected to the right page
-    if (process.env.CORNERSTONE_URL === await page.url()) {
+    if (url.href === await page.url()) {
       cookies = await page.cookies();
       console.log('Siden er fulstendig lastet ned');
     }
