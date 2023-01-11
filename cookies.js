@@ -55,7 +55,7 @@ async function scrape(cookies) {
 
 
 
-async function login() {
+async function login(scrapeFunction) {
 
 
 
@@ -72,7 +72,7 @@ async function login() {
   }
 
   if (cookies) {
-    scrape(cookies);
+    scrapeFunction(cookies);
     return;
   }
 
@@ -122,7 +122,6 @@ async function login() {
   });
 
 
-
   page.on('load', async () => {
     // You can perform any cleanup tasks here, such as saving data or closing connections
     //save cookies
@@ -140,7 +139,7 @@ async function login() {
 
 (async () => {
 
-  const isLogedIn = await login();
+  const isLogedIn = await login(scrape);
   // console.log(isLogedIn);
 
 
