@@ -9,11 +9,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 
-const url = new URL(process.env.CORNERSTONE_URL);
-const domainNamejson = "./.cookies/".concat(url.hostname.replace(/\./g, "_").concat(".json"));
-console.log(domainNamejson); // 'www.example.com'
 
-async function scrape(cookies) {
+
+async function scrape(cookies, cookieFilenameAndPath, pageURL) {
   // console.log(cookies);
   if (!cookies) {
     return;
@@ -33,17 +31,17 @@ async function scrape(cookies) {
 
   //load cookies
   await page.setCookie(...cookies);
-  await page.goto(url.href);
+  await page.goto(pageURL.href); // her er feilen, etter login, så feiler det her undefined
   await page.screenshot({ path: 'screenshot.png' });
   const pageurl = await page.url();
   // // The test under is no ned for. the logic is taken care of in the login function page on load event
-  if (pageurl !== url.href) {
+  if (pageurl !== pageURL.href) {
 
     console.log("url matsjer ikke med den vi vil inn på. prosessen stopper\n%s  <>  %s", pageurl, url.href);
 
     await browser.close();
     // Fjern Cokies filen
-    await fs.rm(domainNamejson);
+    await fs.rm(cookieFilenameAndPath);
     return;
   }
   await browser.close();
@@ -52,17 +50,18 @@ async function scrape(cookies) {
 
 
 
-
-
-
 async function login(scrapeFunction) {
 
+
+  const url = new URL(process.env.CORNERSTONE_URL);
+  const cookieFileName = "./.cookies/".concat(url.hostname.replace(/\./g, "_").concat(".json"));
+  console.log(cookieFileName); // 'www.example.com'
 
 
   // Read the cookies from the file, if they exist
   let cookies;
   try {
-    const cookiesString = await fs.readFile(domainNamejson);
+    const cookiesString = await fs.readFile(cookieFileName);
 
     cookies = JSON.parse(cookiesString);
     // await page.setCookie(...cookies);
@@ -72,37 +71,18 @@ async function login(scrapeFunction) {
   }
 
   if (cookies) {
-    scrapeFunction(cookies);
+
+    console.log("No need to login. Cookie is good to go");
+    scrapeFunction(cookies, cookieFileName, url);
     return;
   }
 
-  // console.log(cookies);
+  console.log("Prepare to log in to site");
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
   await page.goto(url.href, {
     waitUntil: "networkidle2",
   });
-
-  // await page.type("#login-username", "jviksaas@yahoo.no");
-  // await page.click("#identifierNext");
-
-  // await page.waitForSelector("#password", {
-  //   visible: true,
-  //   hidden: false,
-  // });
-  // await page.type(
-  //   "#login-password",
-  //   "ypv69HxCA9BhiG"
-  // );
-  // await sleep(1000);
-  // await page.click("#login");
-
-  // await sleep(10000);
-
-  //save cookies
-
-
-
 
 
   // This function will run when the browser window closes
@@ -113,12 +93,14 @@ async function login(scrapeFunction) {
     //const cookies = await page.cookies();
     console.log('The browser window is closing');
     try {
-      await fs.writeFile(domainNamejson, JSON.stringify(cookies, null, 2));
+      await fs.writeFile(cookieFileName, JSON.stringify(cookies, null, 2));
       cookie = true;
     } catch (error) {
       cookie = false;
     }
-    scrape(cookies);
+
+    const pageURL = new URL(process.env.CORNERSTONE_URL);
+    scrape(cookies, cookieFileName, pageURL);
   });
 
 
@@ -138,6 +120,7 @@ async function login(scrapeFunction) {
 
 
 (async () => {
+
 
   const isLogedIn = await login(scrape);
   // console.log(isLogedIn);
