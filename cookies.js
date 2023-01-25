@@ -20,7 +20,7 @@ const scrape = async (cookies, cookieFilenameAndPath, pageAdress) => {
 
   await page.setCookie(...cookies);
   await page.goto(pageURL.href);
-  await page.screenshot({ path: 'screenshot.png' });
+  // await page.screenshot({ path: 'screenshot.png' });
 
   // if the URL does not match the desired page, stop the process and delete the cookies file
   if (pageURL.href !== await page.url()) {
@@ -29,6 +29,37 @@ const scrape = async (cookies, cookieFilenameAndPath, pageAdress) => {
     await fs.rm(cookieFilenameAndPath);
     return;
   }
+
+
+  // -------------------------------------------------------------
+  const pageElements = {
+    firstName: await page.$eval('#view_5042867_form____name_first', cc => cc.value),
+
+    midleName: await page.$eval('#view_5042867_form____name_middle', cc => cc.value),
+    lastName: await page.$eval('#view_5042867_form____name_last', cc => cc.value),
+    ssn: await page.$eval('#view_5042867_form____ssn', cc => cc.value),
+  }
+
+  if (!pageElements.ssn) {
+    console.log('fødselsnummer eksisterer ikke');
+    Object.assign(pageElements, {
+      streetAdress: await page.$eval('#view_5042867_form_address_5721983____line1', cc => cc.value),
+      postNumber: await page.$eval('#view_5042867_form_address_5721983____postal_code', cc => cc.value),
+      postAdress: await page.$eval('#view_5042867_form_address_5721983____city', cc => cc.value),
+      // firstName: await page.$eval('', cc => cc.value),
+      // firstName: await page.$eval('', cc => cc.value),
+      // firstName: await page.$eval('', cc => cc.value),
+    });
+  }
+  console.log(pageElements);
+
+
+  // -------------------------------------------------------------
+
+
+
+
+
 
   await browser.close();
 }
