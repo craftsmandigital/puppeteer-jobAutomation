@@ -1,85 +1,68 @@
 const puppeteer = require("puppeteer");
 const fs = require('fs').promises;
 
-const dotenv = require('dotenv');
-// Load environment variables from the .env file
-dotenv.config();
 
-
-
-
-// the parameter of the function is a function. This function is the logic of the scraping
-// parameters of the function is:
-// cookies
-// name and path of the cookie json filename
-// Url object of the page that could be scraped
+// the parameter of the function is the page adress of page to be scraped and a callback function.
+// This function is the logic of the scraping
+// parameters of the callback function is:
+// cookies, type cookies
+// name and path of the cookie json filename, type string
+// Adress/Url of the page that could be scraped, string
 //
 //
-// There could be improvments of this function. extra parameters instead og environment variables.
-async function login(scrapeFunction) {
 
-
-  const url = new URL(process.env.CORNERSTONE_URL);
+// login function is responsible for logging in to the website and saving the cookies to a file
+const login = async (pageAdress, scrapeFunction) => {
+  // create URL from environment variable and cookie file name
+  const url = new URL(pageAdress);
   const cookieFileName = "./.cookies/".concat(url.hostname.replace(/\./g, "_").concat(".json"));
-  console.log(cookieFileName); // 'www.example.com'
 
-
-  // Read the cookies from the file, if they exist
+  // check if cookies already exist in the cookie file
   let cookies;
   try {
     const cookiesString = await fs.readFile(cookieFileName);
-
     cookies = JSON.parse(cookiesString);
-    // await page.setCookie(...cookies);
-
   } catch (e) {
-    console.error(e);// Cookies file does not exist, so we need to log in
+    console.error(e);
   }
 
+  // if cookies exist, use them to scrape the website
   if (cookies) {
-
     console.log("No need to login. Cookie is good to go");
-    scrapeFunction(cookies, cookieFileName, url);
+    scrapeFunction(cookies, cookieFileName, pageAdress);
     return;
   }
 
-  console.log("Prepare to log in to site");
+  // if cookies do not exist, use puppeteer to log in to the website
+  console.log("Preparing to log in to site");
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
   await page.goto(url.href, {
     waitUntil: "networkidle2",
   });
 
-
-  // This function will run when the browser window closes
+  // save cookies to file when browser window closes
   page.on('close', async () => {
-    let cookie;
-    // You can perform any cleanup tasks here, such as saving data or closing connections
-    //save cookies
-    //const cookies = await page.cookies();
     console.log('The browser window is closing');
     try {
       await fs.writeFile(cookieFileName, JSON.stringify(cookies, null, 2));
-      cookie = true;
     } catch (error) {
-      cookie = false;
+      console.error(error);
     }
 
-    const pageURL = new URL(process.env.CORNERSTONE_URL);
-    scrape(cookies, cookieFileName, pageURL);
+    scrapeFunction(cookies, cookieFileName, pageAdress);
   });
 
-
+  // save cookies to variable when page is fully loaded
   page.on('load', async () => {
-    // You can perform any cleanup tasks here, such as saving data or closing connections
-    //save cookies
-    // Only set cookies if we are redirected to the right page
     if (url.href === await page.url()) {
       cookies = await page.cookies();
-      console.log('Siden er fulstendig lastet ned');
+      console.log('Page fully loaded');
     }
   });
 }
+
+
 
 
 module.exports = {
